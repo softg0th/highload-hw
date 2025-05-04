@@ -1,6 +1,55 @@
 version: "3.9"
 
 services:
+  elasticsearch:
+    image: elasticsearch:7.1.0
+    volumes:
+      - ./esdata:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - "discovery.type=single-node"
+    networks:
+      - default
+
+  logstash:
+    build:
+      context: .
+      dockerfile: logstash/Dockerfile
+    ports:
+      - "5228:5228"
+      - "9600:9600"
+    environment:
+      LOGSTASH_PORT: 5228
+      LOGSTASH_INDEX: "test-index"
+      ELASTIC_HOST: "elasticsearch:9200"
+      ELASTIC_USERNAME: "elastic"
+      ELASTIC_PASSWORD: "elastic"
+    networks:
+      - default
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9600" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kibana:
+    image: kibana:7.1.0
+    hostname: kibana
+    ports:
+      - "5601:5601"
+    networks:
+      - default
+    depends_on:
+      - elasticsearch
+    links:
+      - elasticsearch
+    environment:
+      ELASTIC_HOST: "http://elasticsearch:9200"
+      ELASTIC_USERNAME: "elastic"
+      ELASTIC_PASSWORD: "elastic"
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     environment:

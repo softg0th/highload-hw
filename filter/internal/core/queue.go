@@ -2,7 +2,7 @@ package core
 
 import (
 	"context"
-	"log"
+	logstash_logger "github.com/KaranJagtiani/go-logstash"
 	"sync"
 	"time"
 )
@@ -24,9 +24,8 @@ func AddSpamMessage(msg []byte) {
 	spamBufferLock.Unlock()
 }
 
-func StartSpamBatchJob(interval time.Duration) {
+func StartSpamBatchJob(interval time.Duration, logger *logstash_logger.Logstash) {
 	go func() {
-		log.Println("start spam batch job")
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 
@@ -43,10 +42,18 @@ func StartSpamBatchJob(interval time.Duration) {
 			currentTimestamp := time.Now()
 			timestampStr := currentTimestamp.Format(time.RFC3339)
 			if len(batch) > 0 && spamProcessor != nil {
-				log.Println("start spam batch job 2")
+				logger.Info(map[string]interface{}{
+					"message": "Start spam batch job",
+					"error":   false,
+				})
+
 				err := spamProcessor(context.Background(), timestampStr, batch)
 				if err != nil {
-					log.Println("spam batch job error:", err)
+					logger.Error(map[string]interface{}{
+						"message":           "Spam batch job error",
+						"error":             true,
+						"error_description": err.Error(),
+					})
 				}
 			}
 		}

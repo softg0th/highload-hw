@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	logstash_logger "github.com/KaranJagtiani/go-logstash"
 	"google.golang.org/grpc"
 	"log"
 	"net"
@@ -10,6 +11,7 @@ import (
 	pb "storage/internal/proto"
 	"storage/internal/repository"
 	"storage/internal/server"
+	"strconv"
 )
 
 type Config struct {
@@ -21,6 +23,8 @@ type Config struct {
 	mongoRootUserName string
 	mongoRootPassword string
 	httpPort          string
+	logstashProtocol  string
+	logstashPort      int
 }
 
 func initConfig() (*Config, error) {
@@ -32,6 +36,12 @@ func initConfig() (*Config, error) {
 	mongoRootUserName := os.Getenv("MONGO_INITDB_ROOT_USERNAME")
 	mongoRootPassword := os.Getenv("MONGO_INITDB_ROOT_PASSWORD")
 	httpPort := os.Getenv("HTTP_PORT")
+	logstashProtocol := os.Getenv("LOGSTASH_PROTOCOL")
+	logstashPort, err := strconv.Atoi(os.Getenv("LOGSTASH_PORT"))
+
+	if err != nil {
+		return nil, errors.New("LOGSTASH_PORT not set")
+	}
 
 	switch {
 	case grpcProtocol == "":
@@ -50,6 +60,9 @@ func initConfig() (*Config, error) {
 		return nil, errors.New("MONGO_INITDB_ROOT_PASSWORD not set")
 	case httpPort == "":
 		return nil, errors.New("HTTP_PORT not set")
+	case logstashProtocol == "":
+		return nil, errors.New("LOGSTASH_PROTOCOL not set")
+
 	default:
 	}
 	cfg := &Config{
@@ -61,6 +74,8 @@ func initConfig() (*Config, error) {
 		mongoRootUserName: mongoRootUserName,
 		mongoRootPassword: mongoRootPassword,
 		httpPort:          httpPort,
+		logstashProtocol:  logstashProtocol,
+		logstashPort:      logstashPort,
 	}
 	return cfg, nil
 }
@@ -81,10 +96,13 @@ func getDB(cfg *Config) (*repository.DataBase, error) {
 
 func main() {
 	cfg, err := initConfig()
+
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
+
+	logger := logstash_logger.Init("logstash", cfg.logstashPort, cfg.logstashProtocol, 5)
 
 	db, err := getDB(cfg)
 
@@ -104,22 +122,53 @@ func main() {
 
 	listen, err := net.Listen(cfg.grpcProtocol, cfg.grpcPort)
 	serv := grpc.NewServer()
-	storageServer := server.NewServer(infraLayer)
-	log.Printf("created server")
+	storageServer := server.NewServer(infraLayer, logger)
+
+	logger.Info(map[string]interface{}{
+		"message": "Created server",
+		"error":   false,
+	})
+
 	app := server.NewApp(repo)
-	log.Printf("created app")
+
+	logger.Info(map[string]interface{}{
+		"message": "Created app",
+		"error":   false,
+	})
+
 	go func() {
 		if err := app.SetupApp(cfg.httpPort); err != nil {
-			log.Fatalf("failed to start HTTP server: %v", err)
+			logger.Error(map[string]interface{}{
+				"message":           "Failed to setup app",
+				"error":             true,
+				"error_description": err.Error(),
+			})
 		}
 	}()
 
-	log.Printf("started server")
+	logger.Info(map[string]interface{}{
+		"message": "Started server",
+		"error":   false,
+	})
+
 	pb.RegisterStorageServiceServer(serv, storageServer)
-	log.Printf("registred server")
+
+	logger.Info(map[string]interface{}{
+		"message": "Registred server",
+		"error":   false,
+	})
+
 	if err := serv.Serve(listen); err != nil {
-		log.Printf("failed to start server: %v", err)
+		logger.Error(map[string]interface{}{
+			"message":           "Failed to start server",
+			"error":             true,
+			"error_description": err.Error(),
+		})
 		return
 	}
-	log.Println("server running")
+
+	logger.Info(map[string]interface{}{
+		"message": "Running server",
+		"error":   false,
+	})
 }

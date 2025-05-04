@@ -3,7 +3,6 @@ package infra
 import (
 	"context"
 	"github.com/confluentinc/confluent-kafka-go/kafka"
-	"log"
 )
 
 type KafkaProducer struct {
@@ -32,7 +31,6 @@ func NewProducer(bootstrapServers string) (*KafkaProducer, error) {
 }
 
 func (kp *KafkaProducer) SendMessage(topic string, value []byte) error {
-	log.Printf("sent")
 	return kp.producer.Produce(&kafka.Message{
 		TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
 		Value:          value,

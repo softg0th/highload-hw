@@ -4,7 +4,6 @@ import (
 	"context"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"log"
 	"storage/internal/entities"
 )
 
@@ -15,9 +14,6 @@ func (d *DataBase) InsertPostsMongoStream(ctx context.Context, doc entities.Docu
 	go func() {
 		defer close(done)
 		_, err := collection.InsertOne(ctx, doc)
-		if err != nil {
-			log.Fatalf("inserting error:%v", err)
-		}
 		done <- err
 	}()
 

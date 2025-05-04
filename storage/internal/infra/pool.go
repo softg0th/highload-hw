@@ -3,7 +3,6 @@ package infra
 import (
 	"context"
 	"errors"
-	"log"
 	"storage/internal/entities"
 	"storage/internal/repository"
 	"sync"
@@ -36,12 +35,9 @@ func (p *Pool) Start() {
 		go func() {
 			defer p.wg.Done()
 			for job := range p.queue {
-				err := p.repo.DB.InsertPostsMongoStream(context.Background(), job)
-				if err != nil {
-					log.Fatal("insert posts error:", err)
-				} else {
-					log.Println("insert posts success")
-				}
+				// costyl
+
+				p.repo.DB.InsertPostsMongoStream(context.Background(), job)
 			}
 		}()
 	}

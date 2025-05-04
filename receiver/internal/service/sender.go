@@ -3,14 +3,15 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"log"
+	logstash_logger "github.com/KaranJagtiani/go-logstash"
 	"receiver/internal/domain/entities"
 	"receiver/internal/infra"
 	"sync/atomic"
 )
 
 type Sender struct {
-	pool *infra.Pool
+	pool   *infra.Pool
+	logger *logstash_logger.Logstash
 }
 
 var globalID uint64
@@ -29,26 +30,51 @@ func transformMessage(message entities.Message) ([]byte, error) {
 
 func (s *Sender) Send(ctx context.Context, message entities.Message) (entities.KafkaResult, error) {
 	messageBytes, err := transformMessage(message)
+
 	if err != nil {
+		s.logger.Error(map[string]interface{}{
+			"message": "failed to transform message",
+			"error":   true,
+		})
 		return entities.KafkaResult{}, err
 	}
-	log.Printf("executed")
+
+	s.logger.Info(map[string]interface{}{
+		"message": "Incoming message transformed",
+		"error":   false,
+	})
+
 	id := nextID()
 	task := entities.NewKafkaTask(id, messageBytes)
 	err = s.pool.Enqueue(task)
+
 	if err != nil {
-		log.Printf("failed to enqueue task: %v", err)
+		s.logger.Error(map[string]interface{}{
+			"message": "failed to enqueue task",
+			"error":   true,
+		})
+		return entities.KafkaResult{}, err
 	}
+
 	select {
 	case <-ctx.Done():
+		s.logger.Error(map[string]interface{}{
+			"message": "context cancelled",
+		})
 		return entities.KafkaResult{}, ctx.Err()
 	case res := <-task.Reply:
+		s.logger.Info(map[string]interface{}{
+			"message": "Received reply from task",
+			"error":   false,
+			"id":      id,
+		})
 		return res, nil
 	}
 }
 
-func NewSender(pool *infra.Pool) *Sender {
+func NewSender(pool *infra.Pool, logger *logstash_logger.Logstash) *Sender {
 	return &Sender{
-		pool: pool,
+		pool:   pool,
+		logger: logger,
 	}
 }

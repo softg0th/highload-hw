@@ -6,7 +6,6 @@ import (
 	pb "filter/internal/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"log"
 )
 
 type RPCConn struct {
@@ -31,22 +30,13 @@ func NewRPCConn(grpcAddress string) (*RPCConn, error) {
 }
 
 func (r *RPCConn) StreamRequest(message entities.Message) error {
-	log.Printf("RPCConn.StreamRequest: %v", message)
 	err := r.stream.Send(&pb.GetMessageRequest{
 		UserId:    message.UserId,
 		Text:      message.Text,
 		Timestamp: timestamppb.New(message.Timestamp),
 	})
 	if err != nil {
-		log.Printf("failed to send: %v", err)
 		return err
 	}
-	/*
-		_, err = r.stream.Recv()
-		if err != nil {
-			log.Printf("n: %v", err)
-			return err
-		}
-	*/
 	return nil
 }

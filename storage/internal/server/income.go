@@ -2,7 +2,6 @@ package server
 
 import (
 	"io"
-	"log"
 	"storage/internal/entities"
 	storage "storage/internal/proto"
 )
@@ -10,17 +9,33 @@ import (
 func (s *Server) StreamWithAck(stream storage.StorageService_StreamWithAckServer) error {
 	for {
 		in, err := stream.Recv()
-		log.Printf("got something interesting")
+
+		s.Logger.Info(map[string]interface{}{
+			"message": "Got something interesting",
+			"error":   false,
+		})
+
 		if err != nil {
-			log.Printf("error receiving message: %v", err)
+			s.Logger.Info(map[string]interface{}{
+				"message": "Error receiving message",
+				"error":   true,
+				"err":     err.Error(),
+			})
+
 			if err == io.EOF {
-				log.Println("End of stream")
+				s.Logger.Error(map[string]interface{}{
+					"message": "End of stream",
+					"error":   true,
+				})
 				return nil
 			}
 			return err
 		}
 		if in == nil {
-			log.Println("Received nil input")
+			s.Logger.Info(map[string]interface{}{
+				"message": "Received nil input",
+				"error":   false,
+			})
 			continue
 		}
 
@@ -28,7 +43,11 @@ func (s *Server) StreamWithAck(stream storage.StorageService_StreamWithAckServer
 
 		err = s.Infra.Pool.Enqueue(newEntity)
 		if err != nil {
-			log.Printf("failed to enqueue: %v", err)
+			s.Logger.Error(map[string]interface{}{
+				"message": "End of stream",
+				"error":   true,
+				"err":     err.Error(),
+			})
 		}
 	}
 }
