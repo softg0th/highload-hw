@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"filter/internal/core"
 	"filter/internal/infra"
@@ -24,6 +25,7 @@ type Config struct {
 	minioBucket      string
 	logstashProtocol string
 	logstashPort     int
+	prometheusPort   string
 }
 
 func initConfig() (*Config, error) {
@@ -33,7 +35,7 @@ func initConfig() (*Config, error) {
 	accessKeyId := os.Getenv("ACCESS_KEY_ID")
 	secretAccessKey := os.Getenv("SECRET_ACCESS_KEY")
 	minioBucket := os.Getenv("MINIO_BUCKET")
-
+	prometheusPort := os.Getenv("PROMETHEUS_PORT")
 	logstashProtocol := os.Getenv("LOGSTASH_PROTOCOL")
 	logstashPort, err := strconv.Atoi(os.Getenv("LOGSTASH_PORT"))
 
@@ -54,6 +56,8 @@ func initConfig() (*Config, error) {
 		return nil, errors.New("SECRET_ACCESS_KEY not set")
 	case minioBucket == "":
 		return nil, errors.New("MINIO_BUCKET not set")
+	case prometheusPort == "":
+		return nil, errors.New("PROMETHEUS_PORT not set")
 	case logstashProtocol == "":
 		return nil, errors.New("LOGSTASH_PROTOCOL not set")
 	default:
@@ -66,6 +70,7 @@ func initConfig() (*Config, error) {
 		accessKeyId:      accessKeyId,
 		secretAccessKey:  secretAccessKey,
 		minioBucket:      minioBucket,
+		prometheusPort:   prometheusPort,
 		logstashProtocol: logstashProtocol,
 		logstashPort:     logstashPort,
 	}
@@ -81,6 +86,24 @@ func main() {
 	}
 
 	logger := logstash_logger.Init("logstash", cfg.logstashPort, cfg.logstashProtocol, 5)
+	prometheusPort := os.Getenv("PROMETHEUS_PORT")
+
+	ctx := context.Background()
+
+	errCh := infra.StartPrometheus(ctx, prometheusPort, logger)
+
+	select {
+	case <-ctx.Done():
+	case err := <-errCh:
+		if err != nil {
+			logger.Error(map[string]interface{}{
+				"message":           "Failed to setup prometheus server",
+				"error":             true,
+				"error_description": err.Error(),
+			})
+			return
+		}
+	}
 
 	consumer, err := infra.NewKafkaConsumer(cfg.bootstrapServer)
 	logger.Info(map[string]interface{}{

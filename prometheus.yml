@@ -1,0 +1,16 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: "receiver"
+    static_configs:
+      - targets:
+          - receiver:8000
+  - job_name: "filter"
+    static_configs:
+      - targets:
+          - filter:8001
+  - job_name: "storage"
+    static_configs:
+      - targets:
+          - storage:8002

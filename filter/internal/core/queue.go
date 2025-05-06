@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"filter/internal/infra"
 	logstash_logger "github.com/KaranJagtiani/go-logstash"
 	"sync"
 	"time"
@@ -55,6 +56,8 @@ func StartSpamBatchJob(interval time.Duration, logger *logstash_logger.Logstash)
 						"error_description": err.Error(),
 					})
 				}
+
+				infra.SpamBatchesTotal.Inc()
 			}
 		}
 	}()

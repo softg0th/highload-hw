@@ -6,7 +6,6 @@ import (
 	"filter/internal/core"
 	"filter/internal/entities"
 	"filter/internal/infra"
-	"log"
 )
 
 func FilterIt(ctx context.Context, rawMessage []byte, metadata interface{}) error {
@@ -22,13 +21,11 @@ func FilterIt(ctx context.Context, rawMessage []byte, metadata interface{}) erro
 
 	if isItSpam {
 		jsonMsg, _ := json.Marshal(msg)
-		log.Printf("spam: %s\n", msg.Text)
+		infra.SpamMessagesTotal.Inc()
 		core.AddSpamMessage(jsonMsg)
 	} else {
-		log.Printf("not spam: %s\n", msg.Text)
 		svc, _ := metadata.(*infra.Infra)
 		err = svc.Rpc.StreamRequest(msg)
-		log.Printf("error: %s\n", err)
 		return err
 	}
 	return nil
