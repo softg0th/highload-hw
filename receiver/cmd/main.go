@@ -54,15 +54,16 @@ func initConfig() (*Config, error) {
 func main() {
 	cfg, err := initConfig()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return
 	}
 
 	infraLayer, err := infra.NewInfra(cfg.KafkaConn)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return
 	}
+	log.Println("Init producer")
 	defer infraLayer.Producer.Close()
 
 	logger := logstash_logger.Init("logstash", cfg.logstashPort, cfg.logstashProtocol, 5)

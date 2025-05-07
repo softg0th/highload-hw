@@ -3,6 +3,7 @@ module storage
 go 1.23.7
 
 require (
+	github.com/KaranJagtiani/go-logstash v1.0.2
 	github.com/gin-gonic/gin v1.10.0
 	go.mongodb.org/mongo-driver v1.17.3
 	google.golang.org/grpc v1.71.1

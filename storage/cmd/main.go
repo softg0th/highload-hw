@@ -104,6 +104,11 @@ func main() {
 
 	logger := logstash_logger.Init("logstash", cfg.logstashPort, cfg.logstashProtocol, 5)
 
+	logger.Info(map[string]interface{}{
+		"message": "Successfully connected to Logstash",
+		"error":   false,
+	})
+
 	db, err := getDB(cfg)
 
 	if err != nil {
@@ -124,6 +129,7 @@ func main() {
 	serv := grpc.NewServer()
 	storageServer := server.NewServer(infraLayer, logger)
 
+	log.Println("Created server")
 	logger.Info(map[string]interface{}{
 		"message": "Created server",
 		"error":   false,
@@ -131,6 +137,7 @@ func main() {
 
 	app := server.NewApp(repo)
 
+	log.Println("Created app")
 	logger.Info(map[string]interface{}{
 		"message": "Created app",
 		"error":   false,
@@ -138,6 +145,7 @@ func main() {
 
 	go func() {
 		if err := app.SetupApp(cfg.httpPort); err != nil {
+			log.Println(err)
 			logger.Error(map[string]interface{}{
 				"message":           "Failed to setup app",
 				"error":             true,
@@ -146,6 +154,7 @@ func main() {
 		}
 	}()
 
+	log.Println("Started server")
 	logger.Info(map[string]interface{}{
 		"message": "Started server",
 		"error":   false,
@@ -153,12 +162,14 @@ func main() {
 
 	pb.RegisterStorageServiceServer(serv, storageServer)
 
+	log.Println("Registred server")
 	logger.Info(map[string]interface{}{
 		"message": "Registred server",
 		"error":   false,
 	})
 
 	if err := serv.Serve(listen); err != nil {
+		log.Println(err)
 		logger.Error(map[string]interface{}{
 			"message":           "Failed to start server",
 			"error":             true,
@@ -167,8 +178,10 @@ func main() {
 		return
 	}
 
+	log.Println("Running server")
 	logger.Info(map[string]interface{}{
 		"message": "Running server",
 		"error":   false,
 	})
+	log.Printf("ok")
 }

@@ -107,6 +107,9 @@ services:
       - "27017:27017"
     networks:
       - default
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
     volumes:
       - mongodata:/data/db
     healthcheck:
@@ -119,10 +122,10 @@ services:
     image: prom/prometheus:latest
     container_name: prometheus
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
-      -
+
   grafana:
       image: grafana/grafana:latest
       container_name: grafana
@@ -131,6 +134,13 @@ services:
       environment:
         - GF_SECURITY_ADMIN_USER=admin
         - GF_SECURITY_ADMIN_PASSWORD=admin
+
+  node_exporter:
+    image: prom/node-exporter
+    container_name: node_exporter
+    ports:
+      - "9100:9100"
+    restart: unless-stopped
 
   storage:
     container_name: storage
@@ -142,11 +152,8 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
-    healthcheck:
-      test: [ "CMD", "grpc_health_probe", "-addr=localhost:50051" ]
-      interval: 5s
-      timeout: 3s
-      retries: 5
+      logstash:
+        condition: service_healthy
 
     ports:
       - "8002:8002"
@@ -160,6 +167,8 @@ services:
       dockerfile: Dockerfile
     depends_on:
       kafka:
+        condition: service_healthy
+      logstash:
         condition: service_healthy
     ports:
       - "8000:8000"
@@ -176,7 +185,7 @@ services:
           condition: service_healthy
         minio:
           condition: service_healthy
-        storage:
+        logstash:
           condition: service_healthy
       ports:
         - "8001:8001"

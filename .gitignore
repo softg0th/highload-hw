@@ -1,3 +1,5 @@
 .idea/
+.venv/
 basic_load_tests
 recovered_blobs
+esdata/

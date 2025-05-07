@@ -6,6 +6,7 @@ RUN go mod download
 COPY . ./
 RUN go build -o /storage/main ./cmd
 
+
 FROM debian:bookworm-slim
 WORKDIR /storage
 COPY .env ./cmd/.env

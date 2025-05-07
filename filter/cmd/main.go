@@ -86,32 +86,37 @@ func main() {
 	}
 
 	logger := logstash_logger.Init("logstash", cfg.logstashPort, cfg.logstashProtocol, 5)
+
+	logger.Info(map[string]interface{}{
+		"message": "Successfully connected to Logstash",
+		"error":   false,
+	})
+
 	prometheusPort := os.Getenv("PROMETHEUS_PORT")
 
 	ctx := context.Background()
 
-	errCh := infra.StartPrometheus(ctx, prometheusPort, logger)
-
-	select {
-	case <-ctx.Done():
-	case err := <-errCh:
-		if err != nil {
+	go func() {
+		if err := <-infra.StartPrometheus(ctx, prometheusPort, logger); err != nil {
+			log.Println(err)
 			logger.Error(map[string]interface{}{
 				"message":           "Failed to setup prometheus server",
 				"error":             true,
 				"error_description": err.Error(),
 			})
-			return
 		}
-	}
+	}()
 
 	consumer, err := infra.NewKafkaConsumer(cfg.bootstrapServer)
+
+	log.Printf("Init consumer")
 	logger.Info(map[string]interface{}{
 		"message": "Init consumer",
 		"error":   false,
 	})
 
 	if err != nil {
+		log.Println(err)
 		logger.Error(map[string]interface{}{
 			"message":           "Failed to setup consumer",
 			"error":             true,
@@ -121,12 +126,15 @@ func main() {
 	}
 
 	minio, err := infra.NewClient(cfg.minioEndpoint, cfg.accessKeyId, cfg.secretAccessKey, cfg.minioBucket)
+
+	log.Printf("Init minio")
 	logger.Info(map[string]interface{}{
 		"message": "Init minio",
 		"error":   false,
 	})
 
 	if err != nil {
+		log.Println(err)
 		logger.Error(map[string]interface{}{
 			"message":           "Failed to setup minio",
 			"error":             true,
@@ -136,12 +144,15 @@ func main() {
 	}
 
 	rpc, err := infra.NewRPCConn(cfg.grpcAddress)
+
+	log.Printf("Init rpc")
 	logger.Info(map[string]interface{}{
 		"message": "Init rpc",
 		"error":   false,
 	})
 
 	if err != nil {
+		log.Println(err)
 		logger.Error(map[string]interface{}{
 			"message":           "Failed to setup rpc",
 			"error":             true,
@@ -181,4 +192,5 @@ func main() {
 		"message": "Shutdown signal received",
 		"error":   false,
 	})
+	log.Printf("ok")
 }
