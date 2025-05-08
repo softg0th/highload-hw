@@ -15,16 +15,14 @@ import (
 )
 
 type Config struct {
-	grpcProtocol      string
-	grpcPort          string
-	dbUrl             string
-	dbName            string
-	collectionName    string
-	mongoRootUserName string
-	mongoRootPassword string
-	httpPort          string
-	logstashProtocol  string
-	logstashPort      int
+	grpcProtocol     string
+	grpcPort         string
+	dbUrl            string
+	dbName           string
+	collectionName   string
+	httpPort         string
+	logstashProtocol string
+	logstashPort     int
 }
 
 func initConfig() (*Config, error) {
@@ -33,8 +31,6 @@ func initConfig() (*Config, error) {
 	dbUrl := os.Getenv("DB_URL")
 	dbName := os.Getenv("DB_NAME")
 	collectionName := os.Getenv("COLLECTION_NAME")
-	mongoRootUserName := os.Getenv("MONGO_INITDB_ROOT_USERNAME")
-	mongoRootPassword := os.Getenv("MONGO_INITDB_ROOT_PASSWORD")
 	httpPort := os.Getenv("HTTP_PORT")
 	logstashProtocol := os.Getenv("LOGSTASH_PROTOCOL")
 	logstashPort, err := strconv.Atoi(os.Getenv("LOGSTASH_PORT"))
@@ -54,10 +50,6 @@ func initConfig() (*Config, error) {
 		return nil, errors.New("DB_NAME not set")
 	case collectionName == "":
 		return nil, errors.New("COLLECTION_NAME not set")
-	case mongoRootUserName == "":
-		return nil, errors.New("MONGO_INITDB_ROOT_USERNAME not set")
-	case mongoRootPassword == "":
-		return nil, errors.New("MONGO_INITDB_ROOT_PASSWORD not set")
 	case httpPort == "":
 		return nil, errors.New("HTTP_PORT not set")
 	case logstashProtocol == "":
@@ -66,16 +58,14 @@ func initConfig() (*Config, error) {
 	default:
 	}
 	cfg := &Config{
-		grpcProtocol:      grpcProtocol,
-		grpcPort:          grpcPort,
-		dbUrl:             dbUrl,
-		dbName:            dbName,
-		collectionName:    collectionName,
-		mongoRootUserName: mongoRootUserName,
-		mongoRootPassword: mongoRootPassword,
-		httpPort:          httpPort,
-		logstashProtocol:  logstashProtocol,
-		logstashPort:      logstashPort,
+		grpcProtocol:     grpcProtocol,
+		grpcPort:         grpcPort,
+		dbUrl:            dbUrl,
+		dbName:           dbName,
+		collectionName:   collectionName,
+		httpPort:         httpPort,
+		logstashProtocol: logstashProtocol,
+		logstashPort:     logstashPort,
 	}
 	return cfg, nil
 }

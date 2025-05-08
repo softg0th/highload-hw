@@ -107,9 +107,6 @@ services:
       - "27017:27017"
     networks:
       - default
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
     volumes:
       - mongodata:/data/db
     healthcheck:
@@ -189,6 +186,38 @@ services:
           condition: service_healthy
       ports:
         - "8001:8001"
+
+  pytest:
+    container_name: pytest
+    build:
+      context: .
+      dockerfile: tests/Dockerfile
+    depends_on:
+      mongo:
+        condition: service_healthy
+      receiver:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+      storage:
+        condition: service_started
+      filter:
+        condition: service_started
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: [ "sh", "-c", "echo 'Waiting for services...' && sleep 30 && pytest tests/e2e.py -v" ]
+    environment:
+      RECEIVER_URL: http://receiver:8000
+      BOOTSTRAP_SERVER: kafka:29092
+      KAFKA_TOPIC: test
+      MINIO_ENDPOINT: minio:9000
+      ACCESS_KEY_ID: minioadmin
+      SECRET_ACCESS_KEY: minioadmin
+      MINIO_BUCKET: test
+      DB_URL: mongodb://mongo:27017
+      DB_NAME: messages
+      COLLECTION_NAME: non_spam_messages
 
 volumes:
   mongodata:

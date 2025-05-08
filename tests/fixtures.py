@@ -54,28 +54,6 @@ def init_env():
     return environment
 
 
-class KafkaTestConsumer:
-    def __init__(self, bootstrap_servers: str, topic: str):
-        self.topic = topic
-        self.consumer = Consumer({
-            'bootstrap.servers': bootstrap_servers,
-            'group.id': 'test-group',
-            'auto.offset.reset': 'earliest'
-        })
-        self.consumer.subscribe([self.topic])
-
-    def read_message(self, timeout=10.0):
-        msg = self.consumer.poll(timeout)
-        if msg is None:
-            return None
-        if msg.error():
-            raise KafkaException(msg.error())
-        return msg.value().decode('utf-8')
-
-    def close(self):
-        self.consumer.close()
-
-
 class MinioClient:
     def __init__(self, endpoint, access_key, secret_key, bucket):
         self.client = Minio(endpoint, access_key=access_key, secret_key=secret_key, secure=False)
@@ -103,44 +81,52 @@ class MinioClient:
         response = self.client.get_object(self.bucket, object_name)
         return response.read().decode("utf-8")
 
+    def clear_bucket(self):
+        objects = self.client.list_objects(self.bucket, recursive=True)
+        for obj in objects:
+            self.client.remove_object(self.bucket, obj.object_name)
+
+
 
 class Mongo:
     def __init__(self, db_url, db_name, collection_name):
-        user = 'root'
-        password = 'example'
-
-        if "@" not in db_url:
-            db_url = f"mongodb://{user}:{password}@{db_url.lstrip('mongodb://')}/?authSource=admin"
+        self.client = MongoClient(db_url)
+        self.collection = self.client[db_name][collection_name]
 
         self.client = MongoClient(db_url)
         self.collection = self.client[db_name][collection_name]
 
     def find_one(self, query: dict) -> dict | None:
+        print("All docs in collection:")
+        for doc in self.collection.find():
+            print(doc)
+
         return self.collection.find_one(query)
+
+    def drop_collection(self):
+        self.collection.drop()
 
 @pytest.fixture(scope="session")
 def environment():
     return init_env()
 
 @pytest.fixture(scope="session")
-def get_kafka(environment):
-    kafka = KafkaTestConsumer(environment.BOOTSTRAP_SERVER, topic="test")
-    yield kafka
-    kafka.close()
-
-@pytest.fixture(scope="session")
 def get_mongo(environment):
-    return Mongo(
+    mongo = Mongo(
         environment.DB_URL,
         environment.DB_NAME,
         environment.COLLECTION_NAME
     )
+    yield mongo
+    mongo.drop_collection()
 
 @pytest.fixture(scope="session")
 def get_minio(environment):
-    return MinioClient(
+    minio = MinioClient(
         environment.MINIO_ENDPOINT,
         environment.ACCESS_KEY_ID,
         environment.SECRET_ACCESS_KEY,
         environment.MINIO_BUCKET
     )
+    yield minio
+    minio.clear_bucket()

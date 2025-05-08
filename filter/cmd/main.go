@@ -143,7 +143,41 @@ func main() {
 		return
 	}
 
-	rpc, err := infra.NewRPCConn(cfg.grpcAddress)
+	var rpc *infra.RPCConn
+	const maxAttempts = 10
+	const retryDelay = 2 * time.Second
+
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		rpc, err = infra.NewRPCConn(cfg.grpcAddress)
+		if err == nil {
+			log.Printf("Connected to RPC on attempt %d", attempt)
+			logger.Info(map[string]interface{}{
+				"message": "Connected to RPC",
+				"attempt": attempt,
+				"error":   false,
+			})
+			break
+		}
+
+		log.Printf("RPC connection failed (attempt %d/%d): %v", attempt, maxAttempts, err)
+		logger.Warn(map[string]interface{}{
+			"message":           "RPC connection failed",
+			"attempt":           attempt,
+			"error":             true,
+			"error_description": err.Error(),
+		})
+		time.Sleep(retryDelay)
+	}
+
+	if err != nil {
+		log.Println("RPC setup failed after retries:", err)
+		logger.Error(map[string]interface{}{
+			"message":           "RPC setup failed after retries",
+			"error":             true,
+			"error_description": err.Error(),
+		})
+		return
+	}
 
 	log.Printf("Init rpc")
 	logger.Info(map[string]interface{}{

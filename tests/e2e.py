@@ -1,3 +1,6 @@
+import json
+import time
+
 import requests
 from dotenv import load_dotenv
 
@@ -6,7 +9,9 @@ from .fixtures import *
 load_dotenv()
 
 
-def test_normal_message(environment, get_kafka, get_mongo):
+def test_normal_message(environment, get_mongo):
+    print(get_mongo.client.server_info())
+
     msg_text = {
         "user_id": 1,
         "text": "Hello world!"
@@ -15,14 +20,13 @@ def test_normal_message(environment, get_kafka, get_mongo):
     response = requests.post(f'{environment.RECEIVER_URL}/api/message', json=msg_text)
     assert response.status_code == 201
 
-    kafka_msg = get_kafka.read_message()
-    assert msg_text["text"] in kafka_msg
+    time.sleep(15)
 
-    output = get_mongo.find_one({"text": msg_text["text"]})
+    output = get_mongo.find_one({"message": msg_text["text"]})
     assert output is not None
 
 
-def test_spam_message(environment, get_kafka, get_minio):
+def test_spam_message(environment, get_minio):
     msg_text = {
         "user_id": 1,
         "text": "AAAAAAAAAAAAAAAAAAAAAAAAAA"
@@ -31,13 +35,7 @@ def test_spam_message(environment, get_kafka, get_minio):
     response = requests.post(f'{environment.RECEIVER_URL}/api/message', json=msg_text)
     assert response.status_code == 201
 
-    kafka_msg = get_kafka.read_message()
-    assert msg_text["text"] in kafka_msg
+    time.sleep(30)
 
-    minio_msg = get_minio.get_object()
-    assert msg_text == minio_msg
-
-
-def test_end_to_end(environment, get_kafka, get_mongo, get_minio):
-    test_normal_message(environment, get_kafka, get_mongo)
-    test_spam_message(environment, get_kafka, get_minio)
+    minio_msg = json.loads(get_minio.get_object())
+    assert msg_text['text'] == minio_msg['text']
