@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   elasticsearch:
     image: elasticsearch:7.1.0
@@ -101,7 +99,7 @@ services:
       retries: 5
 
   mongo:
-    image: mongo:5.0
+    image: mongo:8.0
     container_name: mongo
     ports:
       - "27017:27017"
@@ -124,13 +122,13 @@ services:
       - "9090:9090"
 
   grafana:
-      image: grafana/grafana:latest
-      container_name: grafana
-      ports:
-        - "3000:3000"
-      environment:
-        - GF_SECURITY_ADMIN_USER=admin
-        - GF_SECURITY_ADMIN_PASSWORD=admin
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
 
   node_exporter:
     image: prom/node-exporter
@@ -151,7 +149,6 @@ services:
         condition: service_healthy
       logstash:
         condition: service_healthy
-
     ports:
       - "8002:8002"
 
@@ -171,42 +168,40 @@ services:
       - "8000:8000"
 
   filter:
-      container_name: filter
-      env_file:
-        - filter/.env
-      build:
-        context: ./filter
-        dockerfile: Dockerfile
-      depends_on:
-        kafka:
-          condition: service_healthy
-        minio:
-          condition: service_healthy
-        logstash:
-          condition: service_healthy
-      ports:
-        - "8001:8001"
+    container_name: filter
+    env_file:
+      - filter/.env
+    build:
+      context: ./filter
+      dockerfile: Dockerfile
+    depends_on:
+      kafka:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      logstash:
+        condition: service_healthy
+    ports:
+      - "8001:8001"
 
   pytest:
-    container_name: pytest
+    container_name: highload-pytest
     build:
       context: .
       dockerfile: tests/Dockerfile
     depends_on:
-      mongo:
-        condition: service_healthy
-      receiver:
-        condition: service_started
-      kafka:
-        condition: service_healthy
-      storage:
-        condition: service_started
-      filter:
-        condition: service_started
+      - mongo
+      - receiver
+      - kafka
+      - storage
+      - filter
     volumes:
       - .:/app
+      - shared_tmp:/sync
     working_dir: /app
-    command: [ "sh", "-c", "echo 'Waiting for services...' && sleep 30 && pytest tests/e2e.py -v" ]
+    command: >
+      sh -c "echo 'Waiting for services...' && sleep 30 && pytest tests/e2e.py -v && touch /sync/pytest_done && sleep infinity"
+
     environment:
       RECEIVER_URL: http://receiver:8000
       BOOTSTRAP_SERVER: kafka:29092
@@ -219,6 +214,38 @@ services:
       DB_NAME: messages
       COLLECTION_NAME: non_spam_messages
 
+  tsung:
+    build:
+      context: ./tsung
+      dockerfile: Dockerfile
+    image: tsung:latest
+    depends_on:
+      - pytest
+    ports:
+      - "8091:8091"
+    volumes:
+      - ./tsung/config:/tsung/config
+      - ./tsung/log:/root/.tsung/log
+      - shared_tmp:/sync
+    command: >
+      sh -c "
+        echo '[tsung] Waiting for pytest to finish...';
+        while [ ! -f /sync/pytest_done ]; do echo '[tsung] waiting...'; sleep 5; done;
+        echo '[tsung] Running test';
+        tsung -f /tsung/config/tsung.xml -k start;
+        echo '[tsung] done';
+        sleep infinity"
+
+
 volumes:
   mongodata:
   minio_data:
+  shared_tmp: {}
+
+networks:
+  elk:
+    name: elk
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.31.0.0/16

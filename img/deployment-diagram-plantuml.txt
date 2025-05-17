@@ -1,0 +1,50 @@
+@startuml
+skinparam componentStyle rectangle
+
+node "LinuxServer (Docker Host)" {
+  
+  node "Nginx\nPort: 80/443" as nginx
+
+  node "Receiver\nPort: 8000" as receiver
+  
+  node "Filter\nPort: 8001" as filter
+  
+  node "Storage (MongoDB)" {
+    component "MongoDB\nPort: 27017" as mongodb
+    component "Storage Service\nPort: 8002" as storage
+  }
+
+  node "Kafka Stack" {
+    component "Zookeeper\nPort: 2181" as zookeeper
+    component "Kafka\nPorts: 9092, 29092" as kafka
+  }
+
+  node "MinIO\nPorts: 9000 (API), 9001 (Console)" as minio
+
+  node "Monitoring" {
+    component "Prometheus\nPort: 9090" as prometheus
+    component "Grafana\nPort: 3000" as grafana
+  }
+
+  node "Logging" {
+    component "Logstash\nPorts: 5228, 9600" as logstash
+    component "Elasticsearch\nPorts: 9200, 9300" as elasticsearch
+    component "Kibana\nPort: 5601" as kibana
+  }
+}
+
+nginx --> receiver : http
+nginx --> filter : http
+receiver --> kafka : produce
+filter --> kafka : consume
+filter --> minio : store files
+filter --> storage : store metadata
+storage --> mongodb : db access
+receiver --> logstash : send logs
+filter --> logstash : send logs
+logstash --> elasticsearch : index logs
+kibana --> elasticsearch : search & visualize
+prometheus --> receiver : scrape metrics
+prometheus --> filter : scrape metrics
+grafana --> prometheus : read metrics
+@enduml

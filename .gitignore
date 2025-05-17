@@ -1,5 +1,7 @@
 .idea/
-.venv/
 basic_load_tests
 recovered_blobs
-esdata/
+/tsung/log/*
+.pytest_cache
+.venv
+esdata

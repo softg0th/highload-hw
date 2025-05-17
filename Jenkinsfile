@@ -72,9 +72,47 @@ pipeline {
                     set -e
 
                     GIT_REVISION=`cat currenntVersion`
-                    # docker build / run ....
-		    # docker-compose ...
+                    docker compose build
                 '''
+                sh '''
+    echo "===== Проверка загрузки Docker-образов ====="
+    
+    set -e
+
+    echo "Pulling elasticsearch..."
+    docker pull elasticsearch:8.5.3
+
+    echo "Pulling logstash..."
+    docker pull logstash:8.5.3
+
+    echo "Pulling kibana..."
+    docker pull kibana:8.5.3
+
+    echo "Pulling zookeeper..."
+    docker pull confluentinc/cp-zookeeper:7.5.0
+
+    echo "Pulling kafka..."
+    docker pull confluentinc/cp-kafka:7.5.0
+
+    echo "Pulling minio..."
+    docker pull minio/minio:latest
+
+    echo "Pulling mongo..."
+    docker pull mongo:5.0
+
+    echo "Pulling prometheus..."
+    docker pull prom/prometheus:latest
+
+    echo "Pulling grafana..."
+    docker pull grafana/grafana:latest
+
+    echo "Pulling node-exporter..."
+    docker pull prom/node-exporter
+
+    echo "===== Проверка образов завершена ====="
+'''
+
+		sh 'docker compose up -d'
             }
          }
     }

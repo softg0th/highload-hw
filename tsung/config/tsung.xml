@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tsung SYSTEM "/usr/local/share/tsung/tsung-1.0.dtd">
+
+<tsung loglevel="notice" version="1.0">
+    <clients>
+        <client host="localhost" use_controller_vm="true"/>
+    </clients>
+
+    <servers>
+        <server host="receiver" port="8000" type="tcp"/>
+    </servers>
+
+    <load>
+        <arrivalphase phase="1" duration="1" unit="minute">
+            <users arrivalrate="50" unit="second"/>
+        </arrivalphase>
+        <arrivalphase phase="2" duration="1" unit="minute">
+            <users arrivalrate="100" unit="second"/>
+        </arrivalphase>
+        <arrivalphase phase="3" duration="1" unit="minute">
+            <users arrivalrate="200" unit="second"/>
+        </arrivalphase>
+    </load>
+
+
+    <sessions>
+        <session name="receiver_test" probability="100" type="ts_http">
+            <request>
+                <http url="/api/message"
+                      method="POST"
+                      version="1.1"
+                      contents_from_file="/tsung/config/body_normal.json">
+                    <http_header name="Content-Type" value="application/json"/>
+                </http>
+            </request>
+
+            <thinktime value="2" random="false"/>
+
+            <request>
+                <http url="/api/message"
+                      method="POST"
+                      version="1.1"
+                      contents_from_file="/tsung/config/body_spam.json">
+                    <http_header name="Content-Type" value="application/json"/>
+                </http>
+            </request>
+        </session>
+    </sessions>
+</tsung>

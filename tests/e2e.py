@@ -35,7 +35,7 @@ def test_spam_message(environment, get_minio):
     response = requests.post(f'{environment.RECEIVER_URL}/api/message', json=msg_text)
     assert response.status_code == 201
 
-    time.sleep(30)
+    time.sleep(5)
 
     minio_msg = json.loads(get_minio.get_object())
     assert msg_text['text'] == minio_msg['text']

@@ -1,0 +1,50 @@
+@startuml
+skinparam componentStyle rectangle
+
+package "Load Balancer" {
+  [<<component>> Nginx]
+}
+
+package "Message Broker" {
+  [<<component>> Kafka]
+}
+
+package "Microservices" {
+  [<<component>> Receiver]
+  [<<component>> Filter]
+  [<<component>> Storage]
+}
+
+package "Databases" {
+  [<<component>> MongoDB]
+  [<<component>> Minio]
+}
+
+package "Monitoring" {
+  [<<component>> Prometheus]
+  [<<component>> Grafana]
+}
+
+package "Logging (ELK Stack)" {
+  [<<component>> Logstash]
+  [<<component>> Elasticsearch]
+  [<<component>> Kibana]
+}
+
+' Connections
+[<<component>> Nginx] --> [<<component>> Receiver] : HTTP request
+[<<component>> Receiver] --> [<<component>> Kafka] : Sends events
+[<<component>> Kafka] --> [<<component>> Filter] : Consumes messages
+[<<component>> Filter] --> [<<component>> Storage] : Filtered data
+[<<component>> Storage] --> [<<component>> MongoDB] : Save metadata
+[<<component>> Storage] --> [<<component>> Minio] : Save files
+
+[<<component>> Receiver] --> [<<component>> Logstash] : Send logs
+[<<component>> Logstash] --> [<<component>> Elasticsearch]
+[<<component>> Kibana] --> [<<component>> Elasticsearch]
+
+[<<component>> Prometheus] --> [<<component>> Receiver] : Metrics scraping
+[<<component>> Grafana] --> [<<component>> Prometheus]
+
+@enduml
+
