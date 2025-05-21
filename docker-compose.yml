@@ -1,6 +1,6 @@
 services:
   elasticsearch:
-    image: elasticsearch:7.1.0
+    image: elasticsearch:8.5.3
     volumes:
       - ./esdata:/usr/share/elasticsearch/data
     ports:
@@ -33,7 +33,7 @@ services:
       retries: 5
 
   kibana:
-    image: kibana:7.1.0
+    image: kibana:8.5.3
     hostname: kibana
     ports:
       - "5601:5601"
@@ -99,7 +99,7 @@ services:
       retries: 5
 
   mongo:
-    image: mongo:8.0
+    image: mongo:5.0
     container_name: mongo
     ports:
       - "27017:27017"
@@ -117,7 +117,7 @@ services:
     image: prom/prometheus:latest
     container_name: prometheus
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/:/etc/prometheus/
     ports:
       - "9090:9090"
 

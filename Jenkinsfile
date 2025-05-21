@@ -50,6 +50,45 @@ pipeline {
                 '''
             }
         }
+        stage('Run load tests') {
+            agent {
+                docker {
+                    image 'docker-builder'
+                    reuseNode true
+                    args '-u root --net="main_bridge" -v /var/run/docker.sock:/var/run/docker.sock'
+                }
+            }
+            steps {
+                sh '''
+                    # Ждем pytest
+                    echo "[tsung] Ожидание завершения pytest..."
+                    while [ ! -f ./tsung/log/pytest_done ] && [ ! -f ./shared_tmp/pytest_done ]; do
+                      echo "[tsung] still waiting...";
+                      sleep 5;
+                    done
+
+                    echo "[tsung] pytest завершен, запускаем нагрузочное тестирование..."
+
+                    docker compose exec tsung tsung -f /tsung/config/tsung.xml -k start
+
+                    echo "[tsung] тест завершен"
+                '''
+                
+                sh '''
+                    mkdir -p tsung_results
+                    cp -r ./tsung/log/* ./tsung_results/ || true
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'tsung_results/**/*', allowEmptyArchive: true
+                }
+                failure {
+                    echo 'Нагрузочное тестирование завершилось с ошибкой.'
+                }
+            }
+        }
+
         
         stage('Deploy artifacts') {
             agent { 
