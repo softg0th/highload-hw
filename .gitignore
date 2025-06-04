@@ -6,4 +6,6 @@ esdata
 .venv
 .pytest_cache
 mongo/shard
+mongo/shard1
 mongo/configdb
+tests/__pycache__
