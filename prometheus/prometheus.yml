@@ -2,19 +2,28 @@ global:
   scrape_interval: 5s
   evaluation_interval: 5s
 
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - "alertmanager:9093"
+
+rule_files:
+  - "alert.rules.yml"
+
 scrape_configs:
   - job_name: "node_exporter"
     static_configs:
       - targets: [ "node_exporter:9100" ]
+
   - job_name: "receiver"
     static_configs:
-      - targets:
-          - receiver:8000
-  - job_name: "filter"
-    static_configs:
-      - targets:
-          - filter:8001
+      - targets: [ "receiver:8000" ]
+
   - job_name: "storage"
     static_configs:
-      - targets:
-          - storage:8002
+      - targets: [ "storage:8002" ]
+
+  - job_name: "filter"
+    static_configs:
+      - targets: [ "nginx:80" ]

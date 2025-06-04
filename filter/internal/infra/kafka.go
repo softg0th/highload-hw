@@ -1,8 +1,9 @@
 package infra
 
 import (
-	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"time"
+
+	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
 type KafkaConsumer struct {

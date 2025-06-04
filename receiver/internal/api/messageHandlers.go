@@ -3,8 +3,10 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/valyala/fasthttp"
+	"log"
 	"receiver/internal/domain/entities"
+
+	"github.com/valyala/fasthttp"
 )
 
 func (h *Handler) DebugGet(ctx *fasthttp.RequestCtx) {
@@ -29,7 +31,7 @@ func (h *Handler) ReceiveMessage(ctx *fasthttp.RequestCtx) {
 		ctx.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
 		return
 	}
-
+	log.Println("New message!")
 	ctx.SetStatusCode(fasthttp.StatusCreated)
 	ctx.SetContentType("application/json")
 	ctx.Write([]byte(`{"DEBUG":"ok"}`))

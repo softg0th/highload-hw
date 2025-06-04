@@ -1,5 +1,7 @@
 import json
 import time
+import atexit
+from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
@@ -39,3 +41,7 @@ def test_spam_message(environment, get_minio):
 
     minio_msg = json.loads(get_minio.get_object())
     assert msg_text['text'] == minio_msg['text']
+
+@atexit.register
+def mark_tests_done():
+    Path("/sync/pytest_done").touch()

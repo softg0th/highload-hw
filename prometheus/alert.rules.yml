@@ -1,0 +1,29 @@
+groups:
+  - name: system-alerts
+    rules:
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100) > 80
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU usage above 80%"
+          description: "Instance {{ $labels.instance }} CPU usage is above 80%."
+
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.75
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Memory usage above 75%"
+          description: "Instance {{ $labels.instance }} memory usage is above 75%."
+
+      - alert: InstanceDown
+        expr: up == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Instance {{ $labels.instance }} down"
+          description: "Service {{ $labels.job }} on {{ $labels.instance }} is down for 30s"

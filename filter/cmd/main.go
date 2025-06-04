@@ -26,6 +26,8 @@ type Config struct {
 	logstashProtocol string
 	logstashPort     int
 	prometheusPort   string
+	redisHost        string
+	redisPort        string
 }
 
 func initConfig() (*Config, error) {
@@ -38,6 +40,12 @@ func initConfig() (*Config, error) {
 	prometheusPort := os.Getenv("PROMETHEUS_PORT")
 	logstashProtocol := os.Getenv("LOGSTASH_PROTOCOL")
 	logstashPort, err := strconv.Atoi(os.Getenv("LOGSTASH_PORT"))
+	redisHost := "redis"
+	redisPort := "6379"
+	/*
+		redisHost := os.Getenv("REDIS_HOST")
+		redisPort := os.Getenv("REDIS_PORT")
+	*/
 
 	if err != nil {
 		return nil, errors.New("LOGSTASH_PORT not set")
@@ -60,6 +68,10 @@ func initConfig() (*Config, error) {
 		return nil, errors.New("PROMETHEUS_PORT not set")
 	case logstashProtocol == "":
 		return nil, errors.New("LOGSTASH_PROTOCOL not set")
+	case redisHost == "":
+		return nil, errors.New("REDIS_HOST not set")
+	case redisPort == "":
+		return nil, errors.New("REDIS_PORT not set")
 	default:
 	}
 
@@ -73,6 +85,8 @@ func initConfig() (*Config, error) {
 		prometheusPort:   prometheusPort,
 		logstashProtocol: logstashProtocol,
 		logstashPort:     logstashPort,
+		redisHost:        redisHost,
+		redisPort:        redisPort,
 	}
 	return cfg, nil
 }
@@ -195,7 +209,9 @@ func main() {
 		return
 	}
 
-	infraLayer := infra.NewInfra(consumer, rpc, minio)
+	redis := infra.NewRedisClient(cfg.redisHost, cfg.redisPort)
+
+	infraLayer := infra.NewInfra(consumer, rpc, minio, redis)
 
 	pool := pkg.NewPool[[]byte](
 		16,

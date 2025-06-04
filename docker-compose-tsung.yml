@@ -1,0 +1,24 @@
+services:
+  tsung:
+    build:
+      context: ./tsung
+      dockerfile: Dockerfile
+    image: tsung:latest
+    ports:
+      - "8091:8091"
+    volumes:
+      - ./tsung/config:/tsung/config
+      - ./tsung/log:/root/.tsung/log
+    networks:
+      - elk_swarm_network
+    command: >
+      sh -c "
+        echo '[tsung] Running test';
+        tsung -f /tsung/config/tsung.xml -k start;
+        echo '[tsung] done';
+        sleep infinity"
+
+networks:
+  elk_swarm_network:
+    external: true
+    name: mystack_elk

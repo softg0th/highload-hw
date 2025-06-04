@@ -1,7 +1,9 @@
 .idea/
 basic_load_tests
 recovered_blobs
-/tsung/log/*
-.pytest_cache
-.venv
+tsung/log
 esdata
+.venv
+.pytest_cache
+mongo/shard
+mongo/configdb

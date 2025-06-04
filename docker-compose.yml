@@ -1,6 +1,6 @@
 services:
   elasticsearch:
-    image: elasticsearch:7.1.0
+    image: elasticsearch:8.5.3
     volumes:
       - ./esdata:/usr/share/elasticsearch/data
     ports:
@@ -33,7 +33,7 @@ services:
       retries: 5
 
   kibana:
-    image: kibana:7.1.0
+    image: kibana:8.5.3
     hostname: kibana
     ports:
       - "5601:5601"
@@ -82,7 +82,6 @@ services:
 
   minio:
     image: minio/minio:latest
-    container_name: minio
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -99,8 +98,7 @@ services:
       retries: 5
 
   mongo:
-    image: mongo:8.0
-    container_name: mongo
+    image: mongo:6.0
     ports:
       - "27017:27017"
     networks:
@@ -108,22 +106,20 @@ services:
     volumes:
       - mongodata:/data/db
     healthcheck:
-      test: [ "CMD", "mongo", "--eval", "db.runCommand({ ping: 1 })" ]
+      test: [ "CMD", "mongosh", "--eval", "db.runCommand({ ping: 1 })" ]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
 
   prometheus:
     image: prom/prometheus:latest
-    container_name: prometheus
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/:/etc/prometheus/
     ports:
       - "9090:9090"
 
   grafana:
     image: grafana/grafana:latest
-    container_name: grafana
     ports:
       - "3000:3000"
     environment:
@@ -132,13 +128,24 @@ services:
 
   node_exporter:
     image: prom/node-exporter
-    container_name: node_exporter
     ports:
       - "9100:9100"
     restart: unless-stopped
 
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - default
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   storage:
-    container_name: storage
     env_file:
       - storage/.env
     build:
@@ -153,7 +160,6 @@ services:
       - "8002:8002"
 
   receiver:
-    container_name: receiver
     env_file:
       - receiver/.env
     build:
@@ -168,7 +174,6 @@ services:
       - "8000:8000"
 
   filter:
-    container_name: filter
     env_file:
       - filter/.env
     build:
@@ -181,61 +186,35 @@ services:
         condition: service_healthy
       logstash:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "8001:8001"
 
-  pytest:
-    container_name: highload-pytest
-    build:
-      context: .
-      dockerfile: tests/Dockerfile
-    depends_on:
-      - mongo
-      - receiver
-      - kafka
-      - storage
-      - filter
+  alertmanager:
+    image: prom/alertmanager
+    ports:
+      - "9093:9093"
     volumes:
-      - .:/app
-      - shared_tmp:/sync
-    working_dir: /app
-    command: >
-      sh -c "echo 'Waiting for services...' && sleep 30 && pytest tests/e2e.py -v && touch /sync/pytest_done && sleep infinity"
-
-    environment:
-      RECEIVER_URL: http://receiver:8000
-      BOOTSTRAP_SERVER: kafka:29092
-      KAFKA_TOPIC: test
-      MINIO_ENDPOINT: minio:9000
-      ACCESS_KEY_ID: minioadmin
-      SECRET_ACCESS_KEY: minioadmin
-      MINIO_BUCKET: test
-      DB_URL: mongodb://mongo:27017
-      DB_NAME: messages
-      COLLECTION_NAME: non_spam_messages
+      - ./alertmanager/:/etc/alertmanager/
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
 
   tsung:
     build:
       context: ./tsung
       dockerfile: Dockerfile
-    image: tsung:latest
-    depends_on:
-      - pytest
     ports:
       - "8091:8091"
     volumes:
       - ./tsung/config:/tsung/config
       - ./tsung/log:/root/.tsung/log
-      - shared_tmp:/sync
     command: >
       sh -c "
-        echo '[tsung] Waiting for pytest to finish...';
-        while [ ! -f /sync/pytest_done ]; do echo '[tsung] waiting...'; sleep 5; done;
         echo '[tsung] Running test';
         tsung -f /tsung/config/tsung.xml -k start;
         echo '[tsung] done';
         sleep infinity"
-
 
 volumes:
   mongodata:
